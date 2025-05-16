@@ -1,0 +1,27 @@
+{
+  "name": "mcp-client",
+  "version": "1.0.0",
+  "description": "User Guide: https://modelcontextprotocol.io/quickstart/client",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.50.4",
+    "@azure/identity": "^4.10.0",
+    "@modelcontextprotocol/sdk": "^1.11.3",
+    "dotenv": "^16.5.0",
+    "openai": "^4.98.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "eslint": "^9.26.0",
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "build"
+  ]
+}
