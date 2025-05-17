@@ -83,46 +83,49 @@ class MCPClient {
 
   async processResponse(response: OpenAI.Responses.Response) {
     const finalText = [];
+    let toolUsed = false;
+    let resp = response;
 
-    for (const output of response.output) {
-      if (output.type === "message") {
-        for (const content of output.content) {
-          if (content.type === "output_text") {
-            finalText.push(content.text + "\n");
-          } else {
-            finalText.push(content.refusal + "\n");
+    do {
+      toolUsed = false;
+
+      for (const output of resp.output) {
+        if (output.type === "message") {
+          for (const content of output.content) {
+            if (content.type === "output_text") {
+              finalText.push(content.text + "\n");
+            } else {
+              finalText.push(content.refusal + "\n");
+            }
           }
+        } else if (output.type === "function_call") {
+          toolUsed = true;
+          this.appendMessage(output);
+
+          const { call_id, name, arguments: toolArgsStr } = output;
+          const toolCallArgs = {
+            name,
+            arguments: JSON.parse(toolArgsStr),
+          };
+          process.stdout.write(
+            "<<<<< Call Tool:\n" + JSON.stringify(toolCallArgs, null, 2) + "\n"
+          );
+          finalText.push(`[Calling tool ${name} with args ${toolArgsStr}]`);
+
+          const result = await this.mcp.callTool(toolCallArgs);
+
+          this.appendMessage({
+            type: "function_call_output",
+            call_id,
+            output: (<{ type: "text"; text: string }[]>result.content)[0].text,
+          });
         }
-      } else if (output.type === "function_call") {
-        console.log(output);
-
-        const { id, call_id, name, arguments: toolArgsStr } = output;
-        const toolName = name;
-        const toolArgs = JSON.parse(toolArgsStr);
-
-        console.log("callTool", { name: toolName, arguments: toolArgs });
-
-        const result = await this.mcp.callTool({
-          name: toolName,
-          arguments: toolArgs,
-        });
-
-        finalText.push(
-          `[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`
-        );
-
-        this.appendMessage(output);
-        this.appendMessage({
-          type: "function_call_output",
-          call_id,
-          output: (<{ type: "text"; text: string }[]>result.content)[0].text,
-        });
-
-        const response2 = await this.requestAI();
-
-        finalText.push(response2.output_text);
       }
-    }
+
+      if (toolUsed) {
+        resp = await this.requestAI();
+      }
+    } while (toolUsed);
 
     return finalText.join("\n");
   }
